@@ -1,0 +1,23 @@
+HW1
+Vivek Khanolkar
+vkhanolk
+1/28/2021
+
+THE PLAINTEXT QUOTE:
+
+Always go to other people's funerals, otherwise they won't go to yours.
+
+- Yogi Berra
+
+THE ENCRYPTION KEY:
+
+30053
+
+EXPLANATION:
+
+A large chunk of the code in cryptBreak.py was taken and adapted from the Lecture 2 notes. 
+Essesntially what the code is doing is looping through keys in betwee 0 and 2^16.
+We were given that since the blocksize is 16 than our keyspace size would be a max of 2^16. 
+In order to find the key and correct plaintext, every key in the loop was plugged in and using the 
+various XOR operations it would try to decrypt the file. Once a decryption included "Yogi Berra"
+it was assumed to be the correct key and plaintext. 
