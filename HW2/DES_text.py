@@ -127,8 +127,10 @@ def encrypt(fileIn, keyName, fileOut):
                 out_xor = newRE ^ round_key[x]  # key mixing
                 subsRE = substitute(out_xor)  # S-box substitution
                 finalRE = subsRE.permute(p_box_permutation)  # p-box permutation
-                bitvec = RE + (LE ^ finalRE) # left and right blocks are swapped for the next round
-            
+                bitvec = RE + (LE ^ finalRE) #left becomes right and right becomes left permuted
+        
+        [LE,RE] = bitvec.divide_into_two() # left and right blocks are swapped for the next round
+        bitvec = RE + LE
         bitvec.write_to_file(outFile)
     outFile.close()
     print("ENCRYPTED!")
@@ -143,14 +145,15 @@ def decrypt(fileIn, keyName, fileOut):
         bitvec = bv.read_bits_from_file( 64 )
         for x in reversed(range(16)):
             if bitvec.length() > 0:
-                [LE, RE] = bitvec.divide_into_two()
-                newLE = LE.permute( expansion_permutation )
-                out_xor = newLE ^ round_key[x] #bv_xor doesnt exist anymore
-    #carry out Substitution with S-box, and permutation with P-box:
-                subsLE = substitute(out_xor)
-                finalLE = subsLE.permute( p_box_permutation)
-                bitvec = (RE ^ finalLE) + LE 
-
+                [LE,RE] = bitvec.divide_into_two()  # divide into halves
+                newRE = RE.permute(expansion_permutation)  # expansion permutation
+                out_xor = newRE ^ round_key[x]  # key mixing
+                subsRE = substitute(out_xor)  # S-box substitution
+                finalRE = subsRE.permute(p_box_permutation)  # p-box permutation
+                bitvec = RE + (LE ^ finalRE) #left becomes right and right becomes left permuted
+        
+        [LE,RE] = bitvec.divide_into_two()
+        bitvec = RE + LE # left and right blocks are swapped for the next round
         bitvec.write_to_file(outFile)
     outFile.close()
     print("DECRYPTED!")
