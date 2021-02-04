@@ -124,7 +124,7 @@ def encrypt(fileIn, keyName, fileOut):
                 finalRE = subsRE.permute(p_box_permutation)  # p-box permutation
                 bitvec = RE + (LE ^ finalRE) #left becomes right and right becomes left permuted
         
-        [LE,RE] = bitvec.divide_into_two() # left and right blocks are swapped for the next round
+        [LE,RE] = bitvec.divide_into_two() # left and right blocks are swapped to reallign
         bitvec = RE + LE
         bitvec.write_to_file(outFile)
     outFile.close()
@@ -148,7 +148,7 @@ def decrypt(fileIn, keyName, fileOut):
                 bitvec = RE + (LE ^ finalRE) #left becomes right and right becomes left permuted
         
         [LE,RE] = bitvec.divide_into_two()
-        bitvec = RE + LE # left and right blocks are swapped for the next round
+        bitvec = RE + LE # left and right blocks are swapped to reallign
         bitvec.write_to_file(outFile)
     outFile.close()
     print("DECRYPTED!")
