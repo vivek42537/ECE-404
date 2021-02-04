@@ -8,26 +8,31 @@
 #Following code taken and modified from hw2_starter.py
 import sys
 import BitVector
-
+from BitVector import *
 
 expansion_permutation = [31, 0, 1, 2, 3, 4, 3, 4, 5, 6, 7, 8, 7, 8, 9, 10, 11, 12, 11, 12, 13, 14, 15, 16, 15, 16, 17, 18, 19, 20, 19, 20, 21, 22, 23, 24, 23, 24, 25, 26, 27, 28, 27, 28, 29, 30, 31, 0]
 
+key_permutation_1 = [56,48,40,32,24,16,8,0,57,49,41,33,25,17,
+                      9,1,58,50,42,34,26,18,10,2,59,51,43,35,
+                     62,54,46,38,30,22,14,6,61,53,45,37,29,21,
+                     13,5,60,52,44,36,28,20,12,4,27,19,11,3]
 
-def encrypt(fileName, keyName):
-    key = keyName #get_encryption_key()
-    round_key = extract_round_key( key )
-    bv = BitVector( fileName ) #BitVector( 'filename.txt' )
-    while (bv.more_to_read):
-        bitvec = bv.read_bits_from_file( 64 )
-        if bitvec.getsize() > 0:
-            [LE, RE] = bitvec.divide_into_two()
-            newRE = RE.permute( expansion_permutation )
-            out_xor = newRE.bv_xor( round_key )
-#carry out Substitution with S-box, and permutation with P-box:
-            final_string = substitute(newRE)
+key_permutation_2 = [13,16,10,23,0,4,2,27,14,5,20,9,22,18,11,
+                      3,25,7,15,6,26,19,12,1,40,51,30,36,46,
+                     54,29,39,50,44,32,47,43,48,38,55,33,52,
+                     45,41,49,35,28,31]
 
-            right_half = final_string.permute( pbox_permutation)
-    return right_half
+shifts_for_round_key_gen = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1]
+
+p_box_permutation = [15,6,19,20,28,11,27,16,
+                    0,14,22,25,4,17,30,9,
+                    1,7,23,13,31,26,2,8,
+                    18,12,29,5,21,10,3,24]
+
+# p_box_permutation = [15,6,19,20,28,11,27,16,
+#                       0,14,22,25,4,17,30,9,
+#                       1,7,23,13,31,26,2,8,
+#                       18,12,29,5,21,10,3,24]
 
 #following code from illustrate_des_substitution.py in order to perform Substitution iwth 8 S-boxes
 
@@ -86,12 +91,76 @@ def substitute( expanded_half_block ):
         output[sindex*4:sindex*4+4] = BitVector(intVal = s_boxes[sindex][row][column], size = 4)
     return output  
 
-# FILEOUT = open(sys.argv[4], 'w')                                            #(d)
-# FILEOUT.write(outputtext)                                                   #(e)
-# FILEOUT.close()          
+#following 2 functions taken and modified from generate_round_keys.py
+def generate_round_keys(encryption_key):
+    round_keys = []
+    key = encryption_key.deep_copy()
+    for round_count in range(16):
+        [LKey, RKey] = key.divide_into_two()    
+        shift = shifts_for_round_key_gen[round_count]
+        LKey << shift
+        RKey << shift
+        key = LKey + RKey
+        round_key = key.permute(key_permutation_2)
+        round_keys.append(round_key)
+    return round_keys
 
+def get_encryption_key(keyName):
+    keyFile = open(keyName)
+    key = BitVector(textstring = keyFile.read() )
+    key = key.permute(key_permutation_1)
+    return key
 
-if __name__ == 'main' :
-    # outputText = encrypt(sys.argv[1], sys.argv[2])
-    print("HELLO")
-    print(outputText)
+def encrypt(fileIn, keyName, fileOut):
+    key = get_encryption_key(keyName)
+    round_key = generate_round_keys( key )
+    # print("round Key:", round_key)
+    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
+    outFile = open(fileOut, 'wb')
+    while (bv.more_to_read):
+        bitvec = bv.read_bits_from_file( 64 )
+        bitvec.pad_from_right(64 - len(bitvec))
+        for x in range(16):
+            if bitvec.length() > 0:
+                [LE,RE] = bitvec.divide_into_two()  # divide into halves
+                newRE = RE.permute(expansion_permutation)  # expansion permutation
+                out_xor = newRE ^ round_key[x]  # key mixing
+                subsRE = substitute(out_xor)  # S-box substitution
+                finalRE = subsRE.permute(p_box_permutation)  # p-box permutation
+                bitvec = RE + (LE ^ finalRE) # left and right blocks are swapped for the next round
+            
+        bitvec.write_to_file(outFile)
+    outFile.close()
+    print("ENCRYPTED!")
+
+def decrypt(fileIn, keyName, fileOut):
+    key = get_encryption_key(keyName)
+    round_key = generate_round_keys( key )
+    # print("round Key:", round_key)
+    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
+    outFile = open(fileOut, 'wb')
+    while (bv.more_to_read):
+        bitvec = bv.read_bits_from_file( 64 )
+        for x in reversed(range(16)):
+            if bitvec.length() > 0:
+                [LE, RE] = bitvec.divide_into_two()
+                newLE = LE.permute( expansion_permutation )
+                out_xor = newLE ^ round_key[x] #bv_xor doesnt exist anymore
+    #carry out Substitution with S-box, and permutation with P-box:
+                subsLE = substitute(out_xor)
+                finalLE = subsLE.permute( p_box_permutation)
+                bitvec = (RE ^ finalLE) + LE 
+
+        bitvec.write_to_file(outFile)
+    outFile.close()
+    print("DECRYPTED!")
+
+if __name__ == '__main__' :
+    if sys.argv[1] == '-e' :
+        print("Encrypting...")
+        encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif sys.argv[1] == '-d' :
+        print("Decrypting...")
+        decrypt(sys.argv[2], sys.argv[3], sys.argv[4])
+    else :
+        print("WRONG INPUT")
