@@ -130,35 +130,6 @@ def encrypt(fileIn, keyName, fileOut):
     outFile.close()
     print("ENCRYPTED!")
 
-def decrypt(fileIn, keyName, fileOut):
-    key = get_encryption_key(keyName)
-    round_key = generate_round_keys( key )
-    # print("round Key:", round_key)
-    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
-    outFile = open(fileOut, 'wb')
-    while (bv.more_to_read):
-        bitvec = bv.read_bits_from_file( 64 )
-        for x in reversed(range(16)):
-            if bitvec.length() > 0:
-                [LE,RE] = bitvec.divide_into_two()  # divide into halves
-                newRE = RE.permute(expansion_permutation)  # expansion permutation
-                out_xor = newRE ^ round_key[x]  # key mixing
-                subsRE = substitute(out_xor)  # S-box substitution
-                finalRE = subsRE.permute(p_box_permutation)  # p-box permutation
-                bitvec = RE + (LE ^ finalRE) #left becomes right and right becomes left permuted
-        
-        [LE,RE] = bitvec.divide_into_two()
-        bitvec = RE + LE # left and right blocks are swapped for the next round
-        bitvec.write_to_file(outFile)
-    outFile.close()
-    print("DECRYPTED!")
-
 if __name__ == '__main__' :
-    if sys.argv[1] == '-e' :
-        print("Encrypting...")
-        encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
-    elif sys.argv[1] == '-d' :
-        print("Decrypting...")
-        decrypt(sys.argv[2], sys.argv[3], sys.argv[4])
-    else :
-        print("WRONG INPUT")
+    encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
+
