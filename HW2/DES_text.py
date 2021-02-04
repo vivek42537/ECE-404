@@ -111,7 +111,7 @@ def encrypt(fileIn, keyName, fileOut):
     round_key = generate_round_keys( key )
     # print("round Key:", round_key)
     bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
-    outFile = open(fileOut, 'wb')
+    outFile = open(fileOut, 'w')
     while (bv.more_to_read):
         bitvec = bv.read_bits_from_file( 64 )
         bitvec.pad_from_right(64 - len(bitvec))
@@ -126,7 +126,9 @@ def encrypt(fileIn, keyName, fileOut):
         
         [LE,RE] = bitvec.divide_into_two() # left and right blocks are swapped to reallign
         bitvec = RE + LE
-        bitvec.write_to_file(outFile)
+        myhex = bitvec.get_bitvector_in_hex()
+        outFile.write(myhex)
+        #myhex.write_to_file(outFile)
     outFile.close()
     print("ENCRYPTED!")
 
@@ -134,10 +136,18 @@ def decrypt(fileIn, keyName, fileOut):
     key = get_encryption_key(keyName)
     round_key = generate_round_keys( key )
     # print("round Key:", round_key)
-    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
+    with open (fileIn, 'r') as myFile:
+        enc = myFile.readlines()
+    #print(enc[0])
+
+    bv = BitVector( hexstring = enc[0] ) #bv = BitVector( 'filename.txt' )
     outFile = open(fileOut, 'wb')
-    while (bv.more_to_read):
-        bitvec = bv.read_bits_from_file( 64 )
+    print("LENGTH:", len(bv))
+    # while (bv.more_to_read):
+    x = 0
+    y = 64
+    while (y != len(bv) + 64):
+        bitvec = bv[x:y]
         for x in reversed(range(16)):
             if bitvec.length() > 0:
                 [LE,RE] = bitvec.divide_into_two()  # divide into halves
@@ -150,6 +160,10 @@ def decrypt(fileIn, keyName, fileOut):
         [LE,RE] = bitvec.divide_into_two()
         bitvec = RE + LE # left and right blocks are swapped to reallign
         bitvec.write_to_file(outFile)
+        print(x,y)
+        x = y
+        y += 64
+        
     outFile.close()
     print("DECRYPTED!")
 
