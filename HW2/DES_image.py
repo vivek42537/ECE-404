@@ -106,12 +106,19 @@ def get_encryption_key(keyName):
     key = key.permute(key_permutation_1)
     return key
 
-def encrypt(fileIn, keyName, fileOut):
+def PPMencrypt(fileIn, keyName, fileOut):
     key = get_encryption_key(keyName)
     round_key = generate_round_keys( key )
-    # print("round Key:", round_key)
-    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
+    bv = BitVector(filename = fileIn)
+    #need to skip over header of ppm file 
     outFile = open(fileOut, 'wb')
+    with open(fileIn, 'rb') as myFile:
+        head = [next(myFile) for x in range(3)]
+    print(head)
+    
+    for x in range(3):
+        outFile.write(head[x])
+
     while (bv.more_to_read):
         bitvec = bv.read_bits_from_file( 64 )
         bitvec.pad_from_right(64 - len(bitvec))
@@ -131,5 +138,5 @@ def encrypt(fileIn, keyName, fileOut):
     print("ENCRYPTED!")
 
 if __name__ == '__main__' :
-    encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
+    PPMencrypt(sys.argv[1], sys.argv[2], sys.argv[3])
 
