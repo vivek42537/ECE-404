@@ -14,6 +14,30 @@ AES_modulus = BitVector(bitstring='100011011')
 subBytesTable = []                                                  # for encryption
 invSubBytesTable = []                                               # for decryption
 
+def genKeys(key_bv):
+    key_words = []
+    keysize = 256
+    key_words = gen_key_schedule_256(key_bv)
+    key_schedule = []
+    # print("\nEach 32-bit word of the key schedule is shown as a sequence of 4 one-byte integers:")
+    for word_index,word in enumerate(key_words):
+        keyword_in_ints = []
+        for i in range(4):
+            keyword_in_ints.append(word[i*8:i*8+8].intValue())
+        if word_index % 4 == 0: print("\n")
+        print("word %d:  %s" % (word_index, str(keyword_in_ints)))
+        key_schedule.append(keyword_in_ints)
+    num_rounds = None
+    if keysize == 256: num_rounds = 14
+    round_keys = [None for i in range(num_rounds+1)]
+    for i in range(num_rounds+1):
+        round_keys[i] = (key_words[i*4] + key_words[i*4+1] + key_words[i*4+2] + 
+                                                       key_words[i*4+3]).get_bitvector_in_hex()
+    # print("\n\nRound keys in hex (first key for input block):\n")
+    # for round_key in round_keys:
+    #     print(round_key)
+    return round_keys
+
 def genTables():
     c = BitVector(bitstring='01100011')
     d = BitVector(bitstring='00000101')
@@ -147,14 +171,14 @@ def addRoundKey(arr, keyWords, round):
 
 def encrypt(fileIn, keyName, fileOut):
     key = get_encryption_key(keyName)
+    roundKey = genKeys(key)
     keyWords = gen_key_schedule_256(key)
     bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
     outFile = open(fileOut, 'w')
     genTables()
 
-    for i in range(4):
-        for j in range(4):
-            print(keyWords[i][8*j:(8*(j+1))])
+    # for i in range(14):
+    #     print(roundKey[i])
 
     stateArray = [[0 for x in range(4)] for x in range(4)]
 
@@ -172,19 +196,19 @@ def encrypt(fileIn, keyName, fileOut):
             for j in range(4):
                 stateArray[i][j] ^= keyWords[i][8*j:(8*(j+1))]
 
-        for x in range(14): #have to do 14 rounds since we have a 256 bit key
-            #SubBytes
-            stateArray = substituteBytes(stateArray)
+        # for x in range(14): #have to do 14 rounds since we have a 256 bit key
+        #     #SubBytes
+        #     stateArray = substituteBytes(stateArray)
 
-            #ShiftRows
-            stateArray = shiftRowsE(stateArray)
+        #     #ShiftRows
+        #     stateArray = shiftRowsE(stateArray)
 
-            #MixColumns
-            if (x != 13):
-                stateArray = mixCols(stateArray)
+        #     #MixColumns
+        #     if (x != 13):
+        #         stateArray = mixCols(stateArray)
 
-            #Add RoundKey
-            stateArray = addRoundKey(stateArray, keyWords, x)
+        #     #Add RoundKey
+        #     stateArray = addRoundKey(stateArray, keyWords, x)
             # for i in range(4):
             #     for j in range(4):
             #         stateArray[i][j] = stateArray[i][j] ^ keyWords[(4 * round) + 4 + i][8*j:8*(j+1)] #need to start from second keyWord till end
@@ -223,15 +247,17 @@ def decrypt(fileIn, keyName, fileOut):
 
     while (y != len(bv) + 128):
         bitvec = bv[x:y]
+
+        #xor it with LAST 4 keywords
+        for i in range(4):
+            for j in range(4):
+                bitvec ^= keyWords[4-i][8*(4-j):(8*((4-j)+1))]
+
         #creating state array
         for i in range(4):
             for j in range(4):
                 stateArray[i][j] = bitvec[32*i + 8*j:32*i + 8*(j+1)]
                 
-        #xor it with first 4 keywords
-        for i in range(4):
-            for j in range(4):
-                stateArray[i][j] ^= keyWords[i][8*j:(8*(j+1))]
 
         # for x in range(1): #have to do 14 rounds since we have a 256 bit key
             # #SubBytes
