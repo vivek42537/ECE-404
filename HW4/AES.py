@@ -8,6 +8,7 @@
 import sys
 from BitVector import *
 
+#Note: https://kavaliro.com/wp-content/uploads/2014/03/AES.pdf was used to visualize steps
 #following code taken and modified from professor Avi Kak's Lecture 8 notes (gen_key_schedule.py and gen_tables.py)
 AES_modulus = BitVector(bitstring='100011011')
 
@@ -24,8 +25,8 @@ def genKeys(key_bv):
         keyword_in_ints = []
         for i in range(4):
             keyword_in_ints.append(word[i*8:i*8+8].intValue())
-        if word_index % 4 == 0: print("\n")
-        print("word %d:  %s" % (word_index, str(keyword_in_ints)))
+        # if word_index % 4 == 0: print("\n")
+        # print("word %d:  %s" % (word_index, str(keyword_in_ints)))
         key_schedule.append(keyword_in_ints)
     num_rounds = None
     if keysize == 256: num_rounds = 14
@@ -121,7 +122,7 @@ def substituteBytes(arr):
             arr[i][j] = BitVector(intVal = subBytesTable[int(arr[i][j])], size=8)
     return arr
 
-
+#had to follow lecture notes sideways since created state array with bits going horizontally instead of vertically
 def shiftRowsE(arr): #Note: necessary to do with new matrix, if manipulate arr shifts get overwritten
     shiftedState = [[None for x in range(4)] for x in range(4)]
     for j in range(4):
@@ -134,7 +135,7 @@ def shiftRowsE(arr): #Note: necessary to do with new matrix, if manipulate arr s
         shiftedState[j][3] = arr[(j+3)%4][3]
     
     return shiftedState
-
+#based on lecture 8 notes:
 def mixCols(arr):
     mixedState = [[None for x in range(4)] for x in range(4)]
     hex2 = BitVector(bitstring = '10')
@@ -160,7 +161,7 @@ def mixCols(arr):
         mixedState[j][3] = dos ^ arr[j][1] ^ arr[j][2] ^ uno
 
     return mixedState
-
+#xor each round key after each round
 def addRoundKey(arr, keyWords, round):
     for i in range(4):
         for j in range(4):
@@ -185,7 +186,8 @@ def encrypt(fileIn, keyName, fileOut):
     while (bv.more_to_read):
         bitvec = bv.read_bits_from_file( 128 )
         bitvec.pad_from_right(128 - len(bitvec))
-
+        
+        #print("LENNY:", len(bitvec))
         #creating state array
         for i in range(4):
             for j in range(4):
@@ -196,19 +198,19 @@ def encrypt(fileIn, keyName, fileOut):
             for j in range(4):
                 stateArray[i][j] ^= keyWords[i][8*j:(8*(j+1))]
 
-        # for x in range(14): #have to do 14 rounds since we have a 256 bit key
-        #     #SubBytes
-        #     stateArray = substituteBytes(stateArray)
+        for x in range(14): #have to do 14 rounds since we have a 256 bit key
+            #SubBytes
+            stateArray = substituteBytes(stateArray)
 
-        #     #ShiftRows
-        #     stateArray = shiftRowsE(stateArray)
+            #ShiftRows
+            stateArray = shiftRowsE(stateArray)
 
-        #     #MixColumns
-        #     if (x != 13):
-        #         stateArray = mixCols(stateArray)
+            #MixColumns
+            if (x != 13):
+                stateArray = mixCols(stateArray)
 
-        #     #Add RoundKey
-        #     stateArray = addRoundKey(stateArray, keyWords, x)
+            #Add RoundKey
+            stateArray = addRoundKey(stateArray, keyWords, x)
             # for i in range(4):
             #     for j in range(4):
             #         stateArray[i][j] = stateArray[i][j] ^ keyWords[(4 * round) + 4 + i][8*j:8*(j+1)] #need to start from second keyWord till end
@@ -223,14 +225,82 @@ def encrypt(fileIn, keyName, fileOut):
     print("ENCRYPTED!")
 
 
+
+def invSubstituteBytes(arr):
+    for i in range(4):
+        for j in range(4):
+            #print(subBytesTable[i*j])
+            arr[i][j] = BitVector(intVal = invSubBytesTable[int(arr[i][j])], size=8)
+    return arr
+
+#had to follow lecture notes sideways since created state array with bits going horizontally instead of vertically
+def invShiftRowsE(arr): #Note: necessary to do with new matrix, if manipulate arr shifts get overwritten
+    shiftedState = [[None for x in range(4)] for x in range(4)]
+    for j in range(4):
+        shiftedState[j][0] = arr[j][0]
+    for j in range(4):
+        shiftedState[j][1] = arr[(j+3)%4][1]
+    for j in range(4):
+        shiftedState[j][2] = arr[(j+2)%4][2]
+    for j in range(4):
+        shiftedState[j][3] = arr[(j+1)%4][3]
+    
+    return shiftedState
+#based on lecture 8 notes:
+def invMixCols(arr):
+    mixedState = [[None for x in range(4)] for x in range(4)]
+    hexE = BitVector(hexstring = '0e')
+    hexB = BitVector(hexstring = '0b')
+    hexD = BitVector(hexstring = '0d')
+    hex9 = BitVector(hexstring = '09')
+
+    for j in range(4):
+        uno = hexE.gf_multiply_modular(arr[j][0], AES_modulus, 8)
+        dos = hexB.gf_multiply_modular(arr[j][1], AES_modulus, 8)
+        tres = hexD.gf_multiply_modular(arr[j][2], AES_modulus, 8)
+        quatro = hex9.gf_multiply_modular(arr[j][3], AES_modulus, 8)
+        mixedState[j][0] = uno ^ dos ^ tres ^ quatro
+
+    for j in range(4):
+        uno = hex9.gf_multiply_modular(arr[j][0], AES_modulus, 8)
+        dos = hexE.gf_multiply_modular(arr[j][1], AES_modulus, 8)
+        tres = hexB.gf_multiply_modular(arr[j][2], AES_modulus, 8)
+        quatro = hexD.gf_multiply_modular(arr[j][3], AES_modulus, 8)
+        mixedState[j][1] = uno ^ dos ^ tres ^ quatro
+    
+    for j in range(4):
+        uno = hexD.gf_multiply_modular(arr[j][0], AES_modulus, 8)
+        dos = hex9.gf_multiply_modular(arr[j][1], AES_modulus, 8)
+        tres = hexE.gf_multiply_modular(arr[j][2], AES_modulus, 8)
+        quatro = hexB.gf_multiply_modular(arr[j][3], AES_modulus, 8)
+        mixedState[j][2] = uno ^ dos ^ tres ^ quatro
+    
+    for j in range(4):
+        uno = hexB.gf_multiply_modular(arr[j][0], AES_modulus, 8)
+        dos = hexD.gf_multiply_modular(arr[j][1], AES_modulus, 8)
+        tres = hex9.gf_multiply_modular(arr[j][2], AES_modulus, 8)
+        quatro = hexE.gf_multiply_modular(arr[j][3], AES_modulus, 8)
+        mixedState[j][3] = uno ^ dos ^ tres ^ quatro
+
+    return mixedState
+
+#xor each round key after each round
+def invAddRoundKey(arr, keyWords, round):
+    for i in range(4):
+        for j in range(4):
+            arr[i][j] ^= keyWords[(4 * round) - 4 + i][8*j:8*(j+1)] #need to start from second of last keyWord till beginning
+    
+    return arr
+
 def decrypt(fileIn, keyName, fileOut):
     key = get_encryption_key(keyName)
     keyWords = gen_key_schedule_256(key)
     bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
-    outFile = open(fileOut, 'w')
+    outFile = open(fileOut, 'wb')
     genTables()
 
     # print("round Key:", round_key)
+    # print("TYPE:", type(keyWords))
 
     stateArray = [[0 for x in range(4)] for x in range(4)]
 
@@ -239,48 +309,53 @@ def decrypt(fileIn, keyName, fileOut):
     #print(enc[0])
 
     bv = BitVector( hexstring = enc[0] ) #bv = BitVector( 'filename.txt' )
-    outFile = open(fileOut, 'wb')
-    print("LENGTH:", len(bv))
+    # print("LENGTH:", len(bv))
     # while (bv.more_to_read):
     x = 0
     y = 128
 
+    # keyWords.reverse()
     while (y != len(bv) + 128):
         bitvec = bv[x:y]
 
-        #xor it with LAST 4 keywords
-        for i in range(4):
-            for j in range(4):
-                bitvec ^= keyWords[4-i][8*(4-j):(8*((4-j)+1))]
-
+        # print("LENTH2", len(bitvec))
         #creating state array
         for i in range(4):
             for j in range(4):
                 stateArray[i][j] = bitvec[32*i + 8*j:32*i + 8*(j+1)]
+
+        #xor it with LAST 4 keywords
+        for i in range(4):
+            for j in range(4):
+                stateArray[i][j] ^= keyWords[i-4][8*j:(8*(j+1))] #keyWords[i-4][8*j:(8*(j+1))]
                 
 
-        # for x in range(1): #have to do 14 rounds since we have a 256 bit key
-            # #SubBytes
-            # stateArray = substituteBytes(stateArray)
+        for round in range(14): #have to do 14 rounds since we have a 256 bit key
 
-            # #ShiftRows
-            # stateArray = shiftRowsE(stateArray)
-            
-            # #MixColumns
-            # if (x != 13):
-            #     stateArray = mixCols(stateArray)
+            #ShiftRows
+            stateArray = invShiftRowsE(stateArray)
 
-            # #Add RoundKey
-            # stateArray = addRoundKey(stateArray, keyWords, x)
-            # for i in range(4):
-            #     for j in range(4):
-            #         stateArray[i][j] = stateArray[i][j] ^ keyWords[(4 * round) + 4 + i][8*j:8*(j+1)] #need to start from second keyWord till end
+            #SubBytes
+            stateArray = invSubstituteBytes(stateArray)
+
+            #Add RoundKey
+            # listKeys = list(keyWords)
+            # revKeys = reversed(listKeys)
+            # keyWords.reverse()
+            stateArray = invAddRoundKey(stateArray, keyWords, (14 - round))
+
+            #MixColumns
+            if (round != 13):
+                stateArray = invMixCols(stateArray)
 
         for i in range(4):
             for j in range(4):
                 stateText = stateArray[i][j]
+                # myhex = stateText.get_bitvector_in_hex()
+                # outFile.write(myhex)
                 stateText.write_to_file(outFile)
         
+        # print(x,y)
         x = y
         y += 128
 
