@@ -8,12 +8,13 @@
 import sys
 from BitVector import *
 
+#following code taken and modified from professor Avi Kak's Lecture 8 notes (gen_key_schedule.py and gen_tables.py)
 AES_modulus = BitVector(bitstring='100011011')
 
 subBytesTable = []                                                  # for encryption
 invSubBytesTable = []                                               # for decryption
 
-def genTables(EorD):
+def genTables():
     c = BitVector(bitstring='01100011')
     d = BitVector(bitstring='00000101')
     for i in range(0, 256):
@@ -31,8 +32,6 @@ def genTables(EorD):
         check = b.gf_MI(AES_modulus, 8)
         b = check if isinstance(check, BitVector) else 0
         invSubBytesTable.append(int(b))
-
-        return subBytesTable if (EorD == 'E') else invSubBytesTable
 
 
 def gee(keyword, round_constant, byte_sub_table):
@@ -91,55 +90,71 @@ def get_encryption_key(keyName): #Only takes keysize of 256 bits (32 characters)
     key = BitVector(textstring = keyFile.read() )
     return key
 
-def subBytes(arr):
+def substituteBytes(arr):
     for i in range(4):
         for j in range(4):
-            arr[i][j] = BitVector(intVal = subBytesTable[int(arr[i][j])])
-    
+            #print(subBytesTable[i*j])
+            arr[i][j] = BitVector(intVal = subBytesTable[int(arr[i][j])], size=8)
     return arr
 
-def shiftRowsE(arr):
+
+def shiftRowsE(arr): #Note: necessary to do with new matrix, if manipulate arr shifts get overwritten
+    shiftedState = [[None for x in range(4)] for x in range(4)]
     for j in range(4):
-        arr[1][j] = arr[1][(j+1)%4]
+        shiftedState[j][0] = arr[j][0]
     for j in range(4):
-        arr[2][j] = arr[2][(j+2)%4]
+        shiftedState[j][1] = arr[(j+1)%4][1]
     for j in range(4):
-        arr[3][j] = arr[3][(j+3)%4] 
+        shiftedState[j][2] = arr[(j+2)%4][2]
+    for j in range(4):
+        shiftedState[j][3] = arr[(j+3)%4][3]
     
-    return arr
+    return shiftedState
 
 def mixCols(arr):
-    mixedState = [[0 for x in range(4)] for x in range(4)]
+    mixedState = [[None for x in range(4)] for x in range(4)]
     hex2 = BitVector(bitstring = '10')
     hex3 = BitVector(bitstring = '11')
     for j in range(4):
-        uno = hex2.gf_multiply_modular(arr[0][j], AES_modulus, 8)
-        dos = hex3.gf_multiply_modular(arr[1][j], AES_modulus, 8)
-        mixedState[0][j] = uno ^ dos ^ arr[2][j] ^ arr[3][j]
+        uno = hex2.gf_multiply_modular(arr[j][0], AES_modulus, 8)
+        dos = hex3.gf_multiply_modular(arr[j][1], AES_modulus, 8)
+        mixedState[j][0] = uno ^ dos ^ arr[j][2] ^ arr[j][3]
 
     for j in range(4):
-        uno = hex2.gf_multiply_modular(arr[1][j], AES_modulus, 8)
-        dos = hex3.gf_multiply_modular(arr[2][j], AES_modulus, 8)
-        mixedState[0][j] = arr[0][j] ^ uno ^ dos ^ arr[3][j]
+        uno = hex2.gf_multiply_modular(arr[j][1], AES_modulus, 8)
+        dos = hex3.gf_multiply_modular(arr[j][2], AES_modulus, 8)
+        mixedState[j][1] = arr[j][0] ^ uno ^ dos ^ arr[j][3]
     
     for j in range(4):
-        uno = hex2.gf_multiply_modular(arr[2][j], AES_modulus, 8)
-        dos = hex3.gf_multiply_modular(arr[3][j], AES_modulus, 8)
-        mixedState[0][j] = arr[0][j] ^ arr[1][j] ^ uno ^ dos
+        uno = hex2.gf_multiply_modular(arr[j][2], AES_modulus, 8)
+        dos = hex3.gf_multiply_modular(arr[j][3], AES_modulus, 8)
+        mixedState[j][2] = arr[j][0] ^ arr[j][1] ^ uno ^ dos
     
     for j in range(4):
-        uno = hex2.gf_multiply_modular(arr[3][j], AES_modulus, 8)
-        dos = hex3.gf_multiply_modular(arr[0][j], AES_modulus, 8)
-        mixedState[0][j] = dos ^ arr[1][j] ^ arr[2][j] ^ uno
+        uno = hex2.gf_multiply_modular(arr[j][3], AES_modulus, 8)
+        dos = hex3.gf_multiply_modular(arr[j][0], AES_modulus, 8)
+        mixedState[j][3] = dos ^ arr[j][1] ^ arr[j][2] ^ uno
 
     return mixedState
+
+def addRoundKey(arr, keyWords, round):
+    for i in range(4):
+        for j in range(4):
+            arr[i][j] ^= keyWords[(4 * round) + 4 + i][8*j:8*(j+1)] #need to start from second keyWord till end
+    
+    return arr
+
 
 def encrypt(fileIn, keyName, fileOut):
     key = get_encryption_key(keyName)
     keyWords = gen_key_schedule_256(key)
     bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
     outFile = open(fileOut, 'w')
-    subBytes = genTables('E')
+    genTables()
+
+    for i in range(4):
+        for j in range(4):
+            print(keyWords[i][8*j:(8*(j+1))])
 
     stateArray = [[0 for x in range(4)] for x in range(4)]
 
@@ -159,26 +174,42 @@ def encrypt(fileIn, keyName, fileOut):
 
         for x in range(14): #have to do 14 rounds since we have a 256 bit key
             #SubBytes
-            stateArray = subBytes(stateArray)
+            stateArray = substituteBytes(stateArray)
+
             #ShiftRows
             stateArray = shiftRowsE(stateArray)
+
             #MixColumns
             if (x != 13):
                 stateArray = mixCols(stateArray)
+
             #Add RoundKey
-        
-        [LE,RE] = bitvec.divide_into_two() # left and right blocks are swapped to reallign
-        bitvec = RE + LE
-        myhex = bitvec.get_bitvector_in_hex()
-        outFile.write(myhex)
-        #myhex.write_to_file(outFile)
+            stateArray = addRoundKey(stateArray, keyWords, x)
+            # for i in range(4):
+            #     for j in range(4):
+            #         stateArray[i][j] = stateArray[i][j] ^ keyWords[(4 * round) + 4 + i][8*j:8*(j+1)] #need to start from second keyWord till end
+
+        for i in range(4):
+            for j in range(4):
+                stateText = stateArray[i][j]
+                myhex = stateText.get_bitvector_in_hex()
+                outFile.write(myhex)
+
     outFile.close()
     print("ENCRYPTED!")
 
+
 def decrypt(fileIn, keyName, fileOut):
     key = get_encryption_key(keyName)
-    round_key = generate_round_keys( key )
+    keyWords = gen_key_schedule_256(key)
+    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
+    outFile = open(fileOut, 'w')
+    genTables()
+
     # print("round Key:", round_key)
+
+    stateArray = [[0 for x in range(4)] for x in range(4)]
+
     with open (fileIn, 'r') as myFile:
         enc = myFile.readlines()
     #print(enc[0])
@@ -188,29 +219,50 @@ def decrypt(fileIn, keyName, fileOut):
     print("LENGTH:", len(bv))
     # while (bv.more_to_read):
     x = 0
-    y = 64
-    while (y != len(bv) + 64):
+    y = 128
+
+    while (y != len(bv) + 128):
         bitvec = bv[x:y]
-        for x in reversed(range(16)):
-            if bitvec.length() > 0:
-                [LE,RE] = bitvec.divide_into_two()  # divide into halves
-                newRE = RE.permute(expansion_permutation)  # expansion permutation
-                out_xor = newRE ^ round_key[x]  # key mixing
-                subsRE = substitute(out_xor)  # S-box substitution
-                finalRE = subsRE.permute(p_box_permutation)  # p-box permutation
-                bitvec = RE + (LE ^ finalRE) #left becomes right and right becomes left permuted
+        #creating state array
+        for i in range(4):
+            for j in range(4):
+                stateArray[i][j] = bitvec[32*i + 8*j:32*i + 8*(j+1)]
+                
+        #xor it with first 4 keywords
+        for i in range(4):
+            for j in range(4):
+                stateArray[i][j] ^= keyWords[i][8*j:(8*(j+1))]
+
+        # for x in range(1): #have to do 14 rounds since we have a 256 bit key
+            # #SubBytes
+            # stateArray = substituteBytes(stateArray)
+
+            # #ShiftRows
+            # stateArray = shiftRowsE(stateArray)
+            
+            # #MixColumns
+            # if (x != 13):
+            #     stateArray = mixCols(stateArray)
+
+            # #Add RoundKey
+            # stateArray = addRoundKey(stateArray, keyWords, x)
+            # for i in range(4):
+            #     for j in range(4):
+            #         stateArray[i][j] = stateArray[i][j] ^ keyWords[(4 * round) + 4 + i][8*j:8*(j+1)] #need to start from second keyWord till end
+
+        for i in range(4):
+            for j in range(4):
+                stateText = stateArray[i][j]
+                stateText.write_to_file(outFile)
         
-        [LE,RE] = bitvec.divide_into_two()
-        bitvec = RE + LE # left and right blocks are swapped to reallign
-        bitvec.write_to_file(outFile)
-        print(x,y)
         x = y
-        y += 64
-        
+        y += 128
+
     outFile.close()
     print("DECRYPTED!")
 
 if __name__ == '__main__' :
+
     if sys.argv[1] == '-e' :
         print("Encrypting...")
         encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
