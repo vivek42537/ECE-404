@@ -178,7 +178,7 @@ def encrypt(inputBV, keyName):
     genTables()
 
     if len(bitvec) != 128:
-        bitvec.pad_from_right(128 - bitvec.length())
+        bitvec.pad_from_right(128 - len(bitvec))
 
     stateArray = [[0 for x in range(4)] for x in range(4)]
 
@@ -215,14 +215,34 @@ def encrypt(inputBV, keyName):
     print("ENCRYPTED!")
 
 
+def ctr_aes_image(iv, image_file = 'image.ppm', out_file = 'enc_image.ppm', key_file = 'key.txt'):
+    outFile = open(out_file, 'wb')
+    with open(fileIn, 'rb') as myFile:
+        head = [next(myFile) for x in range(3)]
+    print(head)
+    
+    for x in range(3):
+        outFile.write(head[x])
+    
+    key = get_encryption_key(key_file)
+    keyWords = gen_key_schedule_256(key)
+    genTables()
 
-# if __name__ == '__main__' :
+    imageBV = BitVector(filename = image_file)
 
-#     if sys.argv[1] == '-e' :
-#         print("Encrypting...")
-#         encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
-#     elif sys.argv[1] == '-d' :
-#         print("Decrypting...")
-#         decrypt(sys.argv[2], sys.argv[3], sys.argv[4])
-#     else :
-#         print("WRONG INPUT")
+    while (imageBV.more_to_read):
+        bitvec = imageBV.read_bits_from_file( 128 )
+        bitvec.pad_from_right(128 - len(bitvec))
+
+        blkEnc = encrypt(iv, key_file)
+
+        xblk = bitvec ^ blkEnc
+        xblk.write_to_file(outFile)
+
+        
+    outFile.close()
+
+
+if __name__ == '__main__' :
+    iv = BitVector(textstring == 'computersecurity') #iv will be 128 bits
+    ctr_aes_image(iv, 'image.ppm', 'enc_image.ppm', 'keyCTR.txt')
