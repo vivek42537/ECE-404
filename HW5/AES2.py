@@ -170,44 +170,48 @@ def addRoundKey(arr, keyWords, round):
     return arr
 
 
-def encrypt(fileIn, keyName, fileOut):
+def encrypt(inputBV, keyName):
     key = get_encryption_key(keyName)
     roundKey = genKeys(key)
     keyWords = gen_key_schedule_256(key)
-    bv = BitVector( filename = fileIn ) #BitVector( 'filename.txt' )
+    bitvec = inputBV
     genTables()
+
+    if len(bitvec) != 128:
+        bitvec.pad_from_right(128 - bitvec.length())
 
     stateArray = [[0 for x in range(4)] for x in range(4)]
 
-    while (bv.more_to_read):
-        bitvec = bv.read_bits_from_file( 128 )
-        bitvec.pad_from_right(128 - len(bitvec))
-        
-        #create state array
-        for i in range(4):
-            for j in range(4):
-                stateArray[i][j] = bitvec[32*i + 8*j:32*i + 8*(j+1)]
-                
-        #xor it with first 4 keywords
-        for i in range(4):
-            for j in range(4):
-                stateArray[i][j] ^= keyWords[i][8*j:(8*(j+1))]
+    #create state array
+    for i in range(4):
+        for j in range(4):
+            stateArray[i][j] = bitvec[32*i + 8*j:32*i + 8*(j+1)]
+            
+    #xor it with first 4 keywords
+    for i in range(4):
+        for j in range(4):
+            stateArray[i][j] ^= keyWords[i][8*j:(8*(j+1))]
 
-        for x in range(14): #have to do 14 rounds since we have a 256 bit key
-            #SubBytes
-            stateArray = substituteBytes(stateArray)
+    for x in range(14): #have to do 14 rounds since we have a 256 bit key
+        #SubBytes
+        stateArray = substituteBytes(stateArray)
 
-            #ShiftRows
-            stateArray = shiftRowsE(stateArray)
+        #ShiftRows
+        stateArray = shiftRowsE(stateArray)
 
-            #MixColumns
-            if (x != 13):
-                stateArray = mixCols(stateArray)
+        #MixColumns
+        if (x != 13):
+            stateArray = mixCols(stateArray)
 
-            #Add RoundKey
-            stateArray = addRoundKey(stateArray, keyWords, x)
+        #Add RoundKey
+        stateArray = addRoundKey(stateArray, keyWords, x)
 
-        return stateArray
+    stateBV = BitVector(size = 0)
+    for i in range(4):
+        for j in range(4):
+            stateBV += stateArray[i][j]
+
+    return stateBV
     print("ENCRYPTED!")
 
 
@@ -347,13 +351,13 @@ def decrypt(fileIn, keyName, fileOut):
     outFile.close()
     print("DECRYPTED!")
 
-if __name__ == '__main__' :
+# if __name__ == '__main__' :
 
-    if sys.argv[1] == '-e' :
-        print("Encrypting...")
-        encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
-    elif sys.argv[1] == '-d' :
-        print("Decrypting...")
-        decrypt(sys.argv[2], sys.argv[3], sys.argv[4])
-    else :
-        print("WRONG INPUT")
+#     if sys.argv[1] == '-e' :
+#         print("Encrypting...")
+#         encrypt(sys.argv[2], sys.argv[3], sys.argv[4])
+#     elif sys.argv[1] == '-d' :
+#         print("Decrypting...")
+#         decrypt(sys.argv[2], sys.argv[3], sys.argv[4])
+#     else :
+#         print("WRONG INPUT")
