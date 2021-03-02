@@ -8,6 +8,8 @@
 import sys
 from BitVector import *
 
+import os
+
 #Note: https://kavaliro.com/wp-content/uploads/2014/03/AES.pdf was used to visualize steps
 #following code taken and modified from professor Avi Kak's Lecture 8 notes (gen_key_schedule.py and gen_tables.py)
 AES_modulus = BitVector(bitstring='100011011')
@@ -171,14 +173,15 @@ def addRoundKey(arr, keyWords, round):
 
 
 def encrypt(inputBV, keyName):
-    key = get_encryption_key(keyName)
-    roundKey = genKeys(key)
-    keyWords = gen_key_schedule_256(key)
+    # key = get_encryption_key(keyName)
+    # roundKey = genKeys(key)
+    # keyWords = gen_key_schedule_256(key)
     bitvec = inputBV
-    genTables()
+    keyWords = keyName
+    # genTables()
 
-    if len(bitvec) != 128:
-        bitvec.pad_from_right(128 - len(bitvec))
+    # if len(bitvec) != 128:
+    #     bitvec.pad_from_right(128 - len(bitvec))
 
     stateArray = [[0 for x in range(4)] for x in range(4)]
 
@@ -217,9 +220,9 @@ def encrypt(inputBV, keyName):
 
 def ctr_aes_image(iv, image_file = 'image.ppm', out_file = 'enc_image.ppm', key_file = 'key.txt'):
     outFile = open(out_file, 'wb')
-    with open(fileIn, 'rb') as myFile:
+
+    with open(image_file, 'rb') as myFile:
         head = [next(myFile) for x in range(3)]
-    print(head)
     
     for x in range(3):
         outFile.write(head[x])
@@ -232,17 +235,32 @@ def ctr_aes_image(iv, image_file = 'image.ppm', out_file = 'enc_image.ppm', key_
 
     while (imageBV.more_to_read):
         bitvec = imageBV.read_bits_from_file( 128 )
+        # bitvec.pad_from_right(128 - (len(bitvec) % 128)) #gives size of 47486
         bitvec.pad_from_right(128 - len(bitvec))
 
-        blkEnc = encrypt(iv, key_file)
+        # print("BVLEN:", len(bitvec))
 
+        blkEnc = encrypt(iv, keyWords)
         xblk = bitvec ^ blkEnc
         xblk.write_to_file(outFile)
 
+        ivInt  = int(iv) + 1
+        iv = BitVector(intVal = ivInt, size = 128)
+
+        # print("LENIV:", len(iv))
+        # iv = BitVector(intVal = (iv.int_val() + 1), size = 128)
+        x += 1
         
     outFile.close()
 
 
 if __name__ == '__main__' :
-    iv = BitVector(textstring == 'computersecurity') #iv will be 128 bits
-    ctr_aes_image(iv, 'image.ppm', 'enc_image.ppm', 'keyCTR.txt')
+    file1 = os.path.getsize('enc_image_sample.ppm')
+    file2 = os.path.getsize('enc_image.ppm')
+    file3 = os.path.getsize('image.ppm')
+    print("SAMPLE:", file1)
+    print("MINE:", file2)
+    print("ORIGIN:", file3)
+    # iv = BitVector(textstring="computersecurity") #iv will be  128 bits, usually we use random number from x931 initialized as a vector
+    # print("LENIV:", len(iv))
+    # ctr_aes_image(iv, 'image.ppm', 'enc_image.ppm', 'keyCTR.txt')
