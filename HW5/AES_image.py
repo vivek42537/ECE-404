@@ -220,25 +220,31 @@ def encrypt(inputBV, keyName):
 
 def ctr_aes_image(iv, image_file = 'image.ppm', out_file = 'enc_image.ppm', key_file = 'key.txt'):
     outFile = open(out_file, 'wb')
+    imageBV = BitVector(filename = image_file)
 
-    with open(image_file, 'rb') as myFile:
-        head = [next(myFile) for x in range(3)]
+    #had to swap implementation of reading first three lines with the following loop (help from TA Ben Jiang)
+    lines = 0
+    filler = BitVector(intVal = 10, size = 8)
+    while lines != 3:
+        bVec = imageBV.read_bits_from_file(8)
+        if bVec == filler:
+            lines += 1
+        bVec.write_to_file(outFile)
+
+    # with open(image_file, 'rb') as myFile:
+    #     head = [next(myFile) for x in range(3)]
     
-    for x in range(3):
-        outFile.write(head[x])
+    # for x in range(3):
+    #     outFile.write(head[x])
     
     key = get_encryption_key(key_file)
     keyWords = gen_key_schedule_256(key)
     genTables()
 
-    imageBV = BitVector(filename = image_file)
-
     while (imageBV.more_to_read):
         bitvec = imageBV.read_bits_from_file( 128 )
         # bitvec.pad_from_right(128 - (len(bitvec) % 128)) #gives size of 47486
         bitvec.pad_from_right(128 - len(bitvec))
-
-        # print("BVLEN:", len(bitvec))
 
         blkEnc = encrypt(iv, keyWords)
         xblk = bitvec ^ blkEnc
@@ -247,11 +253,10 @@ def ctr_aes_image(iv, image_file = 'image.ppm', out_file = 'enc_image.ppm', key_
         ivInt  = int(iv) + 1
         iv = BitVector(intVal = ivInt, size = 128)
 
-        # print("LENIV:", len(iv))
-        # iv = BitVector(intVal = (iv.int_val() + 1), size = 128)
-        x += 1
+        blocks += 1
         
     outFile.close()
+    # myFile.close()
 
 
 if __name__ == '__main__' :
@@ -262,5 +267,5 @@ if __name__ == '__main__' :
     print("MINE:", file2)
     print("ORIGIN:", file3)
     # iv = BitVector(textstring="computersecurity") #iv will be  128 bits, usually we use random number from x931 initialized as a vector
-    # print("LENIV:", len(iv))
+    # # print("LENIV:", len(iv))
     # ctr_aes_image(iv, 'image.ppm', 'enc_image.ppm', 'keyCTR.txt')
