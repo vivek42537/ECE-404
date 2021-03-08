@@ -36,8 +36,49 @@ def ppqq(e, flag):
 
 def RSAencrypt(fileIn, fileOut, e, p, q):
     ebv = BitVector(intVal = e)
-    dbv = ebv.multiplicative_inverse()
-        
+    nmod = p * q
+    totient = (p - 1) * (q - 1)
+    dbv = ebv.multiplicative_inverse(BitVector(intVal = totient, size = 256))
+    d = int(dbv)
+
+    inbv = BitVector(filename = fileIn)
+    outFile = open(fileOut, 'w')
+
+    while(inbv.more_to_read):
+        bitvec = inbv.read_bits_from_file(128)
+        bitvec.pad_from_right(128 - len(bitvec)) #pad as usual from right
+        bitvec.pad_from_left(128) #make it into a 256 block
+
+        enc = pow(int(bitvec), e, nmod)
+        encbv = BitVector(intVal = enc, size = 256)
+        myhex = encbv.get_bitvector_in_hex()
+        outFile.write(myhex)
+    
+    outFile.close()
+    print("ENCRYPTED")
+
+def RSAdecrypt(fileIn, fileOut, e, p, q):
+    ebv = BitVector(intVal = e)
+    nmod = p * q
+    totient = (p - 1) * (q - 1)
+    outFile = open(fileOut, 'wb')
+    dbv = ebv.multiplicative_inverse(BitVector(intVal = totient, size = 256))
+    d = int(dbv)
+    
+    with open(fileIn, 'r') as myFile:
+        enc = myFile.readlines()
+    
+    bv = BitVector(hexstring = enc[0])
+    x = 0
+    y = 256
+
+    while(y != len(bv) + 256):
+        bitvec = bv[x:y]
+        #CRT From lecture notes:
+        vp = pow(int(bitvec), d, p)
+        vq = pow(int(bitvec), d, q)
+
+        xp = q * int(
 
 if __name__ == '__main__' :
     e = 65537
@@ -63,7 +104,11 @@ if __name__ == '__main__' :
 
     elif sys.argv[1] == '-d' :
         print("Decrypting...")
-        RSAdecrypt(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+        pfile = open(sys.argv[3], 'r')
+        qfile = open(sys.argv[4], 'r')
+        p = int(pfile.read())
+        q = int(qfile.read())
+        RSAdecrypt(sys.argv[2], sys.argv[5], e, p, q)
 
     else :
         print("WRONG INPUT")
