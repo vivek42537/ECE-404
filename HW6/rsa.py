@@ -7,8 +7,9 @@
 
 import sys
 from BitVector import *
-from PrimeGenerator import *
+from PrimeGenerator import * #Prof. Avi Kak lecture 12 file imported
 
+#this gcd implementation is from Prof. Avi Kak lecture 5 
 def gcd(a, b):
     while b:                                             
         a,b = b, a%b
@@ -30,8 +31,8 @@ def ppqq(e, flag):
 
     if flag == 0:
         flag = 1
-        ppqq(e, flag)
-    else:
+        return ppqq(e, flag)
+    elif flag == 1:
         return p, q
 
 def RSAencrypt(fileIn, fileOut, e, p, q):
@@ -80,7 +81,7 @@ def RSAdecrypt(fileIn, fileOut, e, p, q):
     while(y != len(bv) + 256):
         # print("LEN:", len(bv))
         bitvec = bv[x:y]
-        #CRT From lecture notes:
+        #CRT From lecture 12 notes:
         vp = pow(int(bitvec), d, p)
         vq = pow(int(bitvec), d, q)
 
@@ -102,7 +103,8 @@ if __name__ == '__main__' :
     if sys.argv[1] == '-g' :
         print("Generating...")
         flag = 1
-        p,q = ppqq(e, flag)
+        p, q = ppqq(e, flag)
+
         with open(sys.argv[2], 'w') as out1:
             out1.write(str(p))
         with open(sys.argv[3], 'w') as out2:
