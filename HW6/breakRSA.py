@@ -24,21 +24,31 @@ def crackRSA(fileIn, fileOut, e, nlist):
     for y in range(3):
         Dlist.append(int(NrevBV[y].multiplicative_inverse(Nbv[y])))
 
+
+    with open(fileIn[0], 'r') as myFile1:
+        enc1 = myFile1.readlines()
+        inc1 = enc1[0].rstrip('\n')
     
-    Ctotal = [] * 3
+    with open(fileIn[1], 'r') as myFile2:
+        enc2 = myFile2.readlines()
+        inc2 = enc2[0].rstrip('\n')
+    
+    with open(fileIn[2], 'r') as myFile3:
+        enc3 = myFile3.readlines()
+        inc3 = enc3[0].rstrip('\n')
 
-
-    inBV = [BitVector(filename = x) for x in fileIn]
+    inc = [inc1, inc2, inc3]
+    inBV = [BitVector(hexstring = x) for x in inc]
     # print("CHEERIO")
     # for x in inBV:
     #     print(x)
-    with open(fileIn)
 
+    Ctotal = [] * 3
     x = 0
     y = 256
     print("HEREEEEE")
-    print(len(fileIn[0]) + 256)
-    while(y != len(fileIn[0]) + 256):
+    print(len(inBV[0]) + 256)
+    while(y != len(inBV[0]) + 256):
         Ctotal.clear()
         for i in inBV:
             Ctotal.append(int(i[x:y]))
@@ -46,6 +56,7 @@ def crackRSA(fileIn, fileOut, e, nlist):
         m3list = [Ctotal[i] * Nrevised[i] * Dlist[i] for i in range(3)]
         m = sum(m3list)
         cubic = solve_pRoot(3, m)
+
         final = BitVector(intVal = cubic, size = 128)
         final.write_to_file(outFile)
         # print(x, y)
