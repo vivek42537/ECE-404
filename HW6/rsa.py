@@ -59,6 +59,8 @@ def RSAencrypt(fileIn, fileOut, e, p, q):
 
 def RSAdecrypt(fileIn, fileOut, e, p, q):
     ebv = BitVector(intVal = e)
+    pbv = BitVector(intVal = p, size = 128)
+    qbv = BitVector(intVal = q, size = 128)
     nmod = p * q
     totient = (p - 1) * (q - 1)
     outFile = open(fileOut, 'wb')
@@ -67,18 +69,33 @@ def RSAdecrypt(fileIn, fileOut, e, p, q):
     
     with open(fileIn, 'r') as myFile:
         enc = myFile.readlines()
+        inc = enc[0].rstrip('\n')
     
-    bv = BitVector(hexstring = enc[0])
+    # print(inc)
+    # print("ABOVE")
+    bv = BitVector(hexstring = inc)
     x = 0
     y = 256
 
     while(y != len(bv) + 256):
+        # print("LEN:", len(bv))
         bitvec = bv[x:y]
         #CRT From lecture notes:
         vp = pow(int(bitvec), d, p)
         vq = pow(int(bitvec), d, q)
 
-        xp = q * int(
+        xp = q * int(qbv.multiplicative_inverse(pbv)) 
+        xq = p * int(pbv.multiplicative_inverse(qbv))
+
+        crt = (vp*xp + vq*xq) % nmod
+        dec = BitVector(intVal = crt, size = 128)
+        dec.write_to_file(outFile)
+
+        x = y
+        y += 256
+    
+    outFile.close()
+    print("DECRYPTED")
 
 if __name__ == '__main__' :
     e = 65537
