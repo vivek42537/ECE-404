@@ -51,7 +51,7 @@ def sha512(message):
     bv = BitVector(textstring = message)
     length = len(bv)
     bv1 = bv + BitVector(bitstring="1")
-    length1 = bv1.length()
+    length1 = len(bv1)
     howmanyzeros = (896 - length1) % 1024
     zerolist = [0] * howmanyzeros
     bv2 = bv1 + BitVector(bitlist = zerolist)
@@ -74,12 +74,12 @@ def sha512(message):
             #  the i_minus_15_word:
 
             #USE FORMULA ON pg. 44 of lecture 15
-            sigma0 = (i_minus_15_word.deep_copy() >> 7) ^ (i_minus_15_word.deep_copy() >> 8) ^ \
+            sigma0 = (i_minus_15_word.deep_copy() >> 1) ^ (i_minus_15_word.deep_copy() >> 8) ^ \
                                                             (i_minus_15_word.deep_copy().shift_right(7))
-            sigma1 = (i_minus_2_word.deep_copy() >> 17) ^ (i_minus_2_word.deep_copy() >> 61) ^ \
+            sigma1 = (i_minus_2_word.deep_copy() >> 19) ^ (i_minus_2_word.deep_copy() >> 61) ^ \
                                                             (i_minus_2_word.deep_copy().shift_right(6))
             words[i] = BitVector(intVal=(int(words[i-16]) + int(sigma1) + int(words[i-7]) + \
-                                                                    int(sigma0)) & 0xFFFFFFFFF, size=64)
+                                                                    int(sigma0)) & 0xFFFFFFFFFFFFFFFF, size=64)
     
         #  Before we can start STEP 3, we need to store the hash buffer contents obtained from the 
         #  previous input message block in the variables a,b,c,d,e,f,g,h:
@@ -93,29 +93,29 @@ def sha512(message):
             sum_a = ((a.deep_copy()) >> 28) ^ ((a.deep_copy()) >> 34) ^ ((a.deep_copy()) >> 39)
             sum_e = ((e.deep_copy()) >> 14) ^ ((e.deep_copy()) >> 18) ^ ((e.deep_copy()) >> 41)
             t1 = BitVector(intVal=(int(h) + int(ch) + int(sum_e) + int(words[i]) + int(K_bv[i])) & \
-                                                                                    0xFFFFFFFFF, size=64)
-            t2 = BitVector(intVal=(int(sum_a) + int(maj)) & 0xFFFFFFFFF, size=64)
+                                                                                    0xFFFFFFFFFFFFFFFF, size=64)
+            t2 = BitVector(intVal=(int(sum_a) + int(maj)) & 0xFFFFFFFFFFFFFFFF, size=64)
             h = g
             g = f
             f = e
-            e = BitVector(intVal=(int(d) + int(t1)) & 0xFFFFFFFFF, size=64)
+            e = BitVector(intVal=(int(d) + int(t1)) & 0xFFFFFFFFFFFFFFFF, size=64)
             d = c
             c = b
             b = a
-            a = BitVector(intVal=(int(t1) + int(t2)) & 0xFFFFFFFFF, size=64)
+            a = BitVector(intVal=(int(t1) + int(t2)) & 0xFFFFFFFFFFFFFFFF, size=64)
     
         #  STEP 4 OF THE HASHING ALGORITHM:  The values in the temporary variables a,b,c,d,e,f,g,h 
         #                                    AFTER 64 rounds of processing are now mixed with the 
         #                                    contents of the hash buffer as calculated for the 
         #                                    previous block of the input message:
-        h0 = BitVector( intVal = (int(h0) + int(a)) & 0xFFFFFFFFF, size=64 )
-        h1 = BitVector( intVal = (int(h1) + int(b)) & 0xFFFFFFFFF, size=64 )
-        h2 = BitVector( intVal = (int(h2) + int(c)) & 0xFFFFFFFFF, size=64 )
-        h3 = BitVector( intVal = (int(h3) + int(d)) & 0xFFFFFFFFF, size=64 )
-        h4 = BitVector( intVal = (int(h4) + int(e)) & 0xFFFFFFFFF, size=64 )
-        h5 = BitVector( intVal = (int(h5) + int(f)) & 0xFFFFFFFFF, size=64 )
-        h6 = BitVector( intVal = (int(h6) + int(g)) & 0xFFFFFFFFF, size=64 )
-        h7 = BitVector( intVal = (int(h7) + int(h)) & 0xFFFFFFFFF, size=64 )
+        h0 = BitVector( intVal = (int(h0) + int(a)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h1 = BitVector( intVal = (int(h1) + int(b)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h2 = BitVector( intVal = (int(h2) + int(c)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h3 = BitVector( intVal = (int(h3) + int(d)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h4 = BitVector( intVal = (int(h4) + int(e)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h5 = BitVector( intVal = (int(h5) + int(f)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h6 = BitVector( intVal = (int(h6) + int(g)) & 0xFFFFFFFFFFFFFFFF, size=64 )
+        h7 = BitVector( intVal = (int(h7) + int(h)) & 0xFFFFFFFFFFFFFFFF, size=64 )
     
     #  Concatenate the contents of the hash buffer to obtain a 512-element BitVector object:
     message_hash = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7
