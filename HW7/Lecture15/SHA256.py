@@ -91,16 +91,14 @@ class SHA256( object ):
         #  The 8 32-words used for initializing the 512-bit hash buffer before we start scanning the
         #  input message block for its hashing. See page 13 (page 17 of the PDF) of the NIST standard.
         #  Note that the hash buffer consists of 8 32-bit words named h0, h1, h2, h3, h4, h5, h6, and h7.
-
-        #VALUES TAKEN FROM pg. 43 in lecture 15 notes
-        h0 = BitVector(hexstring='6a09e667f3bcc908')
-        h1 = BitVector(hexstring='bb67ae8584caa73b')
-        h2 = BitVector(hexstring='3c6ef372fe94f82b')
-        h3 = BitVector(hexstring='a54ff53a5f1d36f1')
-        h4 = BitVector(hexstring='510e527fade682d1')
-        h5 = BitVector(hexstring='9b05688c2b3e6c1f')
-        h6 = BitVector(hexstring='1f83d9abfb41bd6b')
-        h7 = BitVector(hexstring='5be0cd19137e2179')
+        h0 = BitVector(hexstring='6a09e667')
+        h1 = BitVector(hexstring='bb67ae85')
+        h2 = BitVector(hexstring='3c6ef372')
+        h3 = BitVector(hexstring='a54ff53a')
+        h4 = BitVector(hexstring='510e527f')
+        h5 = BitVector(hexstring='9b05688c')
+        h6 = BitVector(hexstring='1f83d9ab')
+        h7 = BitVector(hexstring='5be0cd19')
         
         #  The K constants (also referred to as the "round constants") are used in round-based processing 
         #  of each 512-bit input message block.  There is a 32-bit constant for each of the 64 rounds. 
