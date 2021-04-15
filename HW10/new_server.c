@@ -132,8 +132,8 @@ char * clientComm(int clntSockfd,int * senderBuffSize_addr, int * optlen_addr){
     }    
 
     //need to limit the amount of data strcpy can 'copy' to five bytes.
-    strcpy(str, recvBuff);
-	//strncpy(str, recvBuff, 5); //this will limit number of characters being allowed to copy to 5
+    //strcpy(str, recvBuff);
+	strncpy(str, recvBuff, 5); //this will limit number of characters being allowed to copy to 5
     /* send data to the client */
     if (send(clntSockfd, str, strlen(str), 0) == -1) {
         perror("send failed");
